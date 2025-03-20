@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import requests
 from requests.auth import HTTPBasicAuth
+import json
 
 # 🟢 **Step 1: TM1 API Setup**
 tm1_url = "http://localhost:52670/api/v1"  # Update if TM1 runs on a different host/port
@@ -11,6 +12,7 @@ password = "apple"
 session = requests.Session()
 session.auth = HTTPBasicAuth(username, password)
 
+# 🟢 **Step 2: Data extract using MDX**
 mdx_query = {
     "MDX": """
 SELECT 
@@ -19,7 +21,7 @@ SELECT
         TM1FilterByLevel( TM1SubsetAll( [Year] ), 0) * 
         TM1FilterByLevel( TM1SubsetAll( [Organization] ), 0) ON ROWS 
 FROM [Revenue]
-WHERE ([Month].[Year], [Channel].[Channel Total], [Product].[Phones], [Revenue].[Volume - Units])
+WHERE ([Month].[Jan], [Channel].[Retail], [Product].[3G 32Gb], [Revenue].[Volume - Units])
    """
 }
 
@@ -34,7 +36,8 @@ if response.status_code != 201:
 cellset_id = response.json()["ID"]  # Extract Cellset ID
 
 # 🟢 **Step 4: Fetch Axis 1 (Rows - Year & Organization)**
-axis_1_response = session.get(f"{tm1_url}/Cellsets('{cellset_id}')/Axes(1)/Tuples/?$expand=Members"))
+axis_1_response = session.get(f"{tm1_url}/Cellsets('{cellset_id}')/Axes(1)/Tuples?$expand=Members")
+print(axis_1_response.json())
 axis_1_data = axis_1_response.json()["value"]
 
 axis_1_tuples = []
@@ -61,6 +64,12 @@ cell_values_array = np.array(cell_values).reshape(len(axis_1_tuples), 2)
 # Add Values to DataFrame
 df["Actual"] = cell_values_array[:, 0]
 df["Budget"] = cell_values_array[:, 1]
+df["Channel"]="Retail"
+df["Product"] ="3G 32Gb"
+df["Month"] ="Jan"
+df["Measure"] ="Volume - Units"
+order=["Organization","Channel","Product","Month","Year","Actual","Budget", "Measure"]
+df=df[order]
 
 
 
@@ -103,6 +112,10 @@ for index, row in df.iterrows():
     cursor.execute(sql)
     conn.commit()
 
+#### Create a new column : Adjusted Budget##
+ALTER TABLE REVENUE ADD COLUMN adjusted_budget DECIMAL(10,2);
+UPDATE Revenue 
+SET adjusted_budget = actual * 1.2;
 
 
 
