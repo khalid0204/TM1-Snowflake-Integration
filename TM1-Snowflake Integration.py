@@ -47,7 +47,6 @@ for tuple_entry in axis_1_data:
 # 🟢 **Step 5: Fetch Axis 0 (Columns - Version Names)**
 axis_0_response = session.get(f"{tm1_url}/Cellsets('{cellset_id}')/Axes(0)/Tuples")
 axis_0_data = axis_0_response.json()["value"]
-####column_names = [member["Name"] for member in axis_0_data[0]["Members"]]  # Extract column names
 
 # 🟢 **Step 6: Fetch Cell Values (Numbers)**
 cells_response = session.get(f"{tm1_url}/Cellsets('{cellset_id}')/Cells")
